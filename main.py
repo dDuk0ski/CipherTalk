@@ -1,7 +1,13 @@
 import socket
 import threading
 import tkinter as tk
+import pyuac
+import sys
+
 from tkinter import scrolledtext
+
+from win32comext.mapi.mapi import CLEAR_RN_PENDING
+from win32comext.shell.shell import CLSID_Internet
 
 
 class Client:
@@ -65,7 +71,8 @@ class Client:
         self.window.destroy()
 
 
-
 if __name__ == "__main__":
+    if not pyuac.isUserAdmin():
+        pyuac.runAsAdmin()
+        exit()
     Client()
-
