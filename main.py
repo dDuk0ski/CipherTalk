@@ -1,13 +1,7 @@
 import socket
 import threading
 import tkinter as tk
-import pyuac
-import sys
-
 from tkinter import scrolledtext
-
-from win32comext.mapi.mapi import CLEAR_RN_PENDING
-from win32comext.shell.shell import CLSID_Internet
 
 
 class Client:
@@ -15,12 +9,8 @@ class Client:
         self.window = tk.Tk()
         self.window.title("Client")
 
-        # Panel to hold the label and text field
-        self.label = tk.Label(self.window, text="Enter Text to be encrypted by a caesar cipher of shift 3")
-        self.label.pack(side=tk.TOP, padx=10, pady=10)
-
-        self.jtf = tk.Entry(self.window, justify='right')
-        self.jtf.pack(side=tk.TOP, padx=10, pady=10)
+        self.jtf = tk.Entry(self.window, justify='right', width=80)
+        self.jtf.pack(side=tk.BOTTOM, padx=10, pady=20)
 
         self.jta = scrolledtext.ScrolledText(self.window, width=80, height=20)
         self.jta.pack(side=tk.TOP, padx=10, pady=10)
@@ -34,7 +24,7 @@ class Client:
         try:
             # Create a socket to connect to the server
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.connect(("4.tcp.us-cal-1.ngrok.io", 11390))
+            self.socket.connect(("localhost", 8000))
             threading.Thread(target=self.listen_to_server, daemon=True).start()
         except Exception as ex:
             self.jta.insert(tk.END, str(ex) + '\n')
@@ -62,7 +52,8 @@ class Client:
 
     def receive_from_server(self, text):
         try:
-            self.jta.insert(tk.END, text)
+            msg = text.decode('utf-8')
+            self.jta.insert(tk.END, msg + "\n")
         except Exception as ex:
             print(ex)
 
@@ -71,8 +62,6 @@ class Client:
         self.window.destroy()
 
 
+
 if __name__ == "__main__":
-    if not pyuac.isUserAdmin():
-        pyuac.runAsAdmin()
-        exit()
     Client()

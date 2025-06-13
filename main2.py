@@ -28,7 +28,7 @@ class Client:
         try:
             # Create a socket to connect to the server
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.connect(("4.tcp.us-cal-1.ngrok.io", 11390))
+            self.socket.connect(("localhost", 9000))
             threading.Thread(target=self.listen_to_server, daemon=True).start()
         except Exception as ex:
             self.jta.insert(tk.END, str(ex) + '\n')
@@ -56,7 +56,8 @@ class Client:
 
     def receive_from_server(self, text):
         try:
-            self.jta.insert(tk.END, text)
+            msg = text.decode('utf-8')
+            self.jta.insert(tk.END, msg + "\n")
         except Exception as ex:
             print(ex)
 

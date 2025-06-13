@@ -22,7 +22,7 @@ def handle_client(conn, addr):
 
 def main():
     host = 'localhost'  # Listen on all interfaces
-    port = 8000
+    port = 1234
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         server.bind((host, port))
         server.listen()
