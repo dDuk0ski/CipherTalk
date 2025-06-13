@@ -1,0 +1,5 @@
+pynacl
+cryptography
+sqlalchemy
+typer
+python-dotenv
