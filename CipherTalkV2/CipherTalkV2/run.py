@@ -10,6 +10,7 @@ from local_storage import LocalStorage, Session, Device, Contact
 from friend_service import FriendService
 from message_service import MessageService
 from file_service import FileService
+from qr_service import QRService
 
 LISTEN_PORT = 9000
 MEDIA_DIR = os.path.expanduser("~/cipher_talk/media")
@@ -136,12 +137,104 @@ def chat_loop(peer_username):
         except Exception as e:
             print(f"[Send error] {e}")
 
+def connect_via_qr_code(local_username):
+    """Connect to a peer using QR code or text code"""
+    print("\n📱 QR Code Connection Options:")
+    print("1. Enter connection code manually")
+    print("2. Scan QR code (manual process)")
+    print("3. Go back")
+    
+    choice = input("Choose option (1-3): ").strip()
+    
+    if choice == "1":
+        print("\n📝 Enter the connection code:")
+        connection_code = input("Paste the connection code here: ").strip()
+        
+        # Parse the connection data
+        connection_data = QRService.parse_connection_data(connection_code)
+        if connection_data:
+            peer_username = connection_data["username"]
+            peer_ip = connection_data["ip"]
+            peer_port = connection_data["port"]
+            peer_pubkey = connection_data["public_key"]
+            
+            print(f"\n🔗 Attempting to connect to {peer_username} at {peer_ip}:{peer_port}")
+            
+            # Perform handshake
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((peer_ip, peer_port))
+                    
+                    # Send handshake
+                    handshake = json.dumps({
+                        "type": "handshake",
+                        "username": local_username,
+                        "public_key": get_own_pubkey()
+                    }).encode()
+                    s.sendall(handshake)
+                    
+                    # Receive response
+                    resp = s.recv(8192)
+                    msg = json.loads(resp.decode())
+                    
+                    if msg.get("type") == "handshake":
+                        FriendService.add_friend(peer_username, peer_ip, peer_port, peer_pubkey)
+                        print(f"✅ Successfully connected to {peer_username}")
+                        return peer_username
+                    else:
+                        print("❌ Invalid handshake response")
+                        return None
+                        
+            except Exception as e:
+                print(f"❌ Connection failed: {e}")
+                return None
+        else:
+            print("❌ Invalid connection code")
+            return None
+    
+    elif choice == "2":
+        print("\n📷 QR Code Scanning:")
+        print("1. Open the QR code image on another device")
+        print("2. Use a QR code scanner app to read it")
+        print("3. Copy the scanned text and use option 1")
+        input("Press Enter when ready...")
+        return connect_via_qr_code(local_username)  # Recursive call
+    
+    elif choice == "3":
+        return None
+    
+    else:
+        print("❌ Invalid choice")
+        return connect_via_qr_code(local_username)  # Recursive call
+
 def main():
     ensure_device()
     local_username = input("🔑 Enter your username: ").strip()
+    
+    # Generate and display connection information
+    print(f"\n🔄 Generating connection information for {local_username}...")
+    QRService.generate_and_save_connection_info(local_username, get_own_pubkey(), LISTEN_PORT)
+    
     start_listener(local_username)
-    peer_ip = input("🔌 Enter peer IP to connect: ").strip()
-    peer_username = perform_handshake(peer_ip, local_username)
+    
+    print("\n🔌 Connection Options:")
+    print("1. Connect via IP address")
+    print("2. Connect via QR code/text code")
+    
+    choice = input("Choose connection method (1-2): ").strip()
+    
+    if choice == "1":
+        # Original IP-based connection
+        peer_ip = input("🔌 Enter peer IP to connect: ").strip()
+        peer_username = perform_handshake(peer_ip, local_username)
+    elif choice == "2":
+        # QR code based connection
+        peer_username = connect_via_qr_code(local_username)
+    else:
+        print("❌ Invalid choice, using IP connection")
+        peer_ip = input("🔌 Enter peer IP to connect: ").strip()
+        peer_username = perform_handshake(peer_ip, local_username)
+    
     if peer_username:
         chat_loop(peer_username)
 
