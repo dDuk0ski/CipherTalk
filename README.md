@@ -184,21 +184,4 @@ As the owner you’ll relay group messages/files to all members; as a participan
 
 ---
 
-## Directory Structure
-
-ciphertalk/
-├── crypto\_service.py
-├── code\_service.py
-├── file\_service.py
-├── friend\_service.py
-├── group\_service.py
-├── local\_storage.py
-├── log\_service.py
-├── message\_service.py
-├── run.py
-├── requirements.txt
-└── server\_service.py
-
----
-
 Happy chatting!
