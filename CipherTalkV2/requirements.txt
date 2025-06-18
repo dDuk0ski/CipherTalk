@@ -1,0 +1,6 @@
+pynacl
+cryptography
+sqlalchemy
+typer
+python-dotenv
+pycryptodome
