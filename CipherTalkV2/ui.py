@@ -13,7 +13,7 @@ from message_service import MessageService
 from log_service import load_private_history, log_private_message
 from file_service import FileService
 from ServerService import ServerService
-from run import show_friends, LISTEN_PORT, status_pinger
+from run import show_friends, status_pinger
 
 LOCAL_PORT = 9000
 
@@ -130,7 +130,7 @@ class Client:
         for ts, snd, txt in load_private_history(friend_username, skey):
             jta.insert(tk.END, f"[{ts}][{snd}] {txt}\n")
 
-        server = ServerService(host="0.0.0.0", port=LOCAL_PORT, local_username=self.username_string)
+        server = ServerService(host="127.0.0.1", port=LOCAL_PORT, local_username=self.username_string)
         server.start()
         threading.Thread(target=status_pinger, daemon=True).start()
 
@@ -179,7 +179,7 @@ class Client:
                         "body": ct.hex()
                     }
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                        s.connect((ip, LISTEN_PORT))
+                        s.connect((ip, LOCAL_PORT))
                         s.sendall(json.dumps(pkt).encode())
                     log_private_message(friend_username, self.username_string, ct.hex())
                 except Exception as e:
