@@ -144,7 +144,7 @@ class Client:
         for ts, snd, txt in load_private_history(friend_username, skey):
             jta.insert(tk.END, f"[{ts}][{snd}] {txt}\n")
 
-        server = ServerService(host="0.0.0.0", port=LOCAL_PORT, local_username=self.username_string)
+        server = ServerService(host="127.0.0.1", port=LOCAL_PORT, local_username=self.username_string)
         server.start()
 
         def listen_for_messages():
