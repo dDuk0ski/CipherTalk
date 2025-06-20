@@ -147,18 +147,21 @@ class Client:
                             raw = conn.recv(16_384)
                             pkt = json.loads(raw.decode())
                             if pkt.get("type") == "chat_msg":
-                                ct = bytes.fromhex(pkt["body"])
-                                pt = MessageService.decrypt(contact.session_key, ct)
-                                ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                chat_window.after(0, lambda: (
-                                    jta.insert(tk.END, f"[{ts}] {pkt['from']}: {pt}\n"),
-                                ))
+                                try:
+                                    ct = bytes.fromhex(pkt["body"])
+                                    pt = MessageService.decrypt(contact.session_key, ct)
+                                    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                    chat_window.after(0, lambda: (
+                                        jta.insert(tk.END, f"[{ts}] {pkt['from']}: {pt}\n"),
+                                    ))
+                                except Exception as e:
+                                    print("error within lambda at line 151: ",e)
                         except Exception as e:
-                            print("recv error:", e)
+                            print("recv error: ", e)
                         finally:
                             conn.close()
                 except:
-                    print("discovering error starting at line 144:", sys.exc_info()[0])
+                    print("discovering error starting at line 144: ", sys.exc_info()[0])
             except Exception as e:
                 print("discovering error:", e)
 
