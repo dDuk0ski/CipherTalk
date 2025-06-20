@@ -130,7 +130,7 @@ class Client:
         for ts, snd, txt in load_private_history(friend_username, skey):
             jta.insert(tk.END, f"[{ts}][{snd}] {txt}\n")
 
-        server = ServerService(host=self.ip_string, port=LOCAL_PORT, local_username=self.username_string)
+        server = ServerService(host="0.0.0.0", port=LOCAL_PORT, local_username=self.username_string)
         server.start()
         threading.Thread(target=status_pinger, daemon=True).start()
 
