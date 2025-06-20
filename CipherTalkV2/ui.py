@@ -16,6 +16,7 @@ from ServerService import ServerService
 from run import show_friends, status_pinger
 
 LOCAL_PORT = 9000
+MSG_PORT = 9001
 
 class Client:
     def __init__(self, root):
@@ -136,7 +137,7 @@ class Client:
         def listen_for_messages():
             listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            listener.bind(("0.0.0.0", LOCAL_PORT))
+            listener.bind(("0.0.0.0", MSG_PORT))
             listener.listen()
             while True:
                 conn, addr = listener.accept()
@@ -203,7 +204,7 @@ class Client:
                         "body": ct.hex()
                     }
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                        s.connect((ip, LOCAL_PORT))
+                        s.connect((ip, MSG_PORT))
                         s.sendall(json.dumps(pkt).encode())
                     log_private_message(friend_username, self.username_string, ct.hex())
                 except Exception as e:
