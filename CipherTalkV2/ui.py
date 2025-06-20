@@ -223,9 +223,15 @@ class Client:
                         "body": ct.hex()
                     }
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                        s.connect((ip, LOCAL_PORT))
-                        s.sendall(json.dumps(pkt).encode())
-                    log_private_message(friend_username, self.username_string, ct.hex())
+                        try:
+                            s.connect((ip, LOCAL_PORT))
+                            s.sendall(json.dumps(pkt).encode())
+                        except Exception as e:
+                            jta.insert(tk.END, f"Error connecting to server: {e}\n")
+                    try:
+                        log_private_message(friend_username, self.username_string, ct.hex())
+                    except Exception as e:
+                        jta.insert(tk.END, f"Error sending logging message: {e}\n")
                 except Exception as e:
                     jta.insert(tk.END, f"[CONSOLE_ERROR_CHAT_SYSTEM] {e}\n")
 
