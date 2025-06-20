@@ -112,7 +112,7 @@ def chat_with(friend_username, local_username):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect(("127.0.0.1", LISTEN_PORT))
             s.sendall(json.dumps(pkt).encode())
-        log_service.log_private_message(friend_username, local_username, ct.hex())
+        log_service.w(friend_username, local_username, ct.hex())
 
 # -----------------------------------------------------------------------------
 # Main

@@ -30,31 +30,44 @@ class Client:
         self.ip_string = ""
         self.already_being_generated = False
 
-        self.sidebar = tk.Frame(self.root, bg="light gray")
-        self.sidebar.pack(side=tk.LEFT, fill=tk.Y, ipady=5, ipadx=5)
+        # self.sidebar = tk.Frame(self.root, bg="light gray", width=30)
+        # self.sidebar.pack(side=tk.LEFT, fill=tk.Y, ipady=5, ipadx=5)
 
         self.content_frame = tk.Frame(self.root, bg="black")
         self.content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+        self.text = tk.Text(self.root, bg="white", fg="white", width=20)
+        self.text.pack(side="left", fill="y", padx= 5, pady=5, ipadx=0)
+        self.sb = tk.Scrollbar(root, command=self.text.yview, relief="flat", activebackground="black")
+        self.sb.pack(side="right", fill="y")
+        self.text.configure(yscrollcommand=self.sb.set)
         self.ui_side_bar()
         self.ui_content_frame()
 
     def ui_side_bar(self):
-        self.clear_frame()
+        self.text.delete("1.0", "end")
 
-        friend_list = show_friends()
-        for c in friend_list:
+        add_btn = tk.Button(
+            self.text,
+            text="➕ Add Friend",
+            width=20,
+            command=self.sidebar_add_friend,
+        )
+        add_btn.pack(side="top", padx=10, pady=10)
+        self.text.window_create("end", window=add_btn)
+        self.text.insert("end", "\n")
+
+        for c in show_friends():
             icon = "🟢" if getattr(c, "online", False) else "⚪"
-            try:
-                tk.Button(
-                    self.sidebar,
-                    text=f"{icon} {c.username}\n @ {c.ip}:{c.port}",
-                    width=20,
-                    command=partial(self.ui_chat_window, c.username, c.ip)
-                ).pack(side=tk.TOP, pady=2)
-            except Exception as e:
-                print(e)
-        tk.Button(self.sidebar, text=f"Add friends", width=20, command=self.sidebar_add_friend).pack(side=tk.BOTTOM, pady=2)
+            btn = tk.Button(
+                self.text,
+                text=f"{icon} {c.username}\n@{c.ip}:{c.port}",
+                width=20,
+                command=partial(self.ui_chat_window, c.username, c.ip)
+            )
+            self.text.window_create("end", window=btn)
+            self.text.insert("end", "\n")
+
 
     def ui_content_frame(self):
         self.ui_user()
@@ -268,12 +281,12 @@ class Client:
         user_entry.bind("<Return>", create_user)
 
     def sidebar_add_friend(self):
-        self.clear_frame()
-
-        return_button = tk.Button(self.sidebar, text="<-", command=self.ui_side_bar)
+        return_button = tk.Button(self.text, text="<-", command=self.ui_side_bar)
         return_button.place(x=7, y=7)
 
-        friend_id_text = tk.Entry(self.sidebar, width=20)
+
+
+        friend_id_text = tk.Entry(self.text, width=20)
         placeholder = "Paste friend's ID code: "
         friend_id_text.place(x=17, y=40)
         friend_id_text.insert(0, placeholder)
@@ -293,11 +306,11 @@ class Client:
             decoded = CodeService.decode_code(friend_code)
             try:
                 FriendService.add_friend(decoded['username'], decoded['ip'], int(decoded['port']), decoded['public_key'])
-                result = tk.Label(self.sidebar, text=f"Friend added succesfuly", wraplength=120, justify=tk.LEFT, width=20)
+                result = tk.Label(self.text, text=f"Friend added succesfuly", wraplength=120, justify=tk.LEFT, width=20)
                 result.place(x=7, y=65)
 
             except Exception as e:
-                error = tk.Label(self.sidebar, text=f"\n❌ Invalid code: {e}\n", wraplength=120, justify=tk.LEFT, width=20)
+                error = tk.Label(self.text, text=f"\n❌ Invalid code: {e}\n", wraplength=120, justify=tk.LEFT, width=20)
                 error.place(x=7, y=65)
         friend_id_text.bind("<Return>", add_friend)
 
@@ -305,10 +318,6 @@ class Client:
         self.animation_label.config(text="")
     #     this is potentially redundant, I can just alter the text after a certain period
     #     im going to probably use a if loop that loops the animation only if there is no chat menu selected
-
-    def clear_frame(self):
-        for widget in self.sidebar.winfo_children():
-            widget.destroy()
 
     def close(self):
         self.root.destroy()

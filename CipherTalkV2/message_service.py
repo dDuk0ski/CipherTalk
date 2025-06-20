@@ -18,7 +18,12 @@ class MessageService:
         tag = data[12:28]
         ciphertext = data[28:]
         cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-        return cipher.decrypt_and_verify(ciphertext, tag).decode()
+        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+
+        try:
+            return plaintext.decode("utf-8", errors="ignore")
+        except UnicodeDecodeError:
+            return plaintext
 
     @staticmethod
     def get_contact_by_username(username: str):
