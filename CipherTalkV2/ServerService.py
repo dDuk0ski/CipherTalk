@@ -16,7 +16,7 @@ MEDIA_DIR = os.path.expanduser("~/cipher_talk/media")
 os.makedirs(MEDIA_DIR, exist_ok=True)
 
 class ServerService:
-    def __init__(self, host='0.0.0.0', port=9000, local_username=None):
+    def __init__(self, host='0.0.0.0', port=9000, local_username=None, on_private_msg=None):
         self.host           = host
         self.port           = port
         self.local_username = local_username
@@ -25,6 +25,7 @@ class ServerService:
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.lock           = threading.Lock()
         self.stats          = {'sessions': 0, 'packets_in': 0, 'packets_out': 0}
+        self.on_private_msg = on_private_msg
         logging.basicConfig(level=logging.DEBUG)
 
     def start(self):
@@ -87,10 +88,14 @@ class ServerService:
             if ptype == 'chat_msg':
                 sender, recipient = pkt['from'], pkt['to']
                 if recipient == self.local_username:
-                    contact = Session().query(Contact).filter_by(username=sender).first()
-                    pt = MessageService.decrypt(contact.session_key, bytes.fromhex(pkt['body']))
-                    print(f"\n[{sender}] {pt}")
-                    log_service.log_private_message(sender, sender, pkt['body'])
+                    contact = Session().query(Contact) \
+                    .filter_by(username=sender).first()
+                    raw_pt = MessageService.decrypt(contact.session_key, bytes.fromhex(pkt['body']))
+                    plaintext = raw_pt.decode()
+                    if self.on_private_msg:
+                        self.on_private_msg(sender, plaintext)
+                    else:
+                        print(f"\n[{sender}] {plaintext}")
                 else:
                     c = Session().query(Contact).filter_by(username=recipient).first()
                     if c:

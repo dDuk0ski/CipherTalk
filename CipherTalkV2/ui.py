@@ -16,7 +16,6 @@ from ServerService import ServerService
 from run import show_friends, status_pinger
 
 LOCAL_PORT = 9000
-MSG_PORT = 9001
 
 class Client:
     def __init__(self, root):
@@ -131,33 +130,19 @@ class Client:
         for ts, snd, txt in load_private_history(friend_username, skey):
             jta.insert(tk.END, f"[{ts}][{snd}] {txt}\n")
 
-        server = ServerService(host="127.0.0.1", port=LOCAL_PORT, local_username=self.username_string)
+        def handle_incoming(sender, text):
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            jta.insert(tk.END, f"[{ts}] {sender}: {text}\n")
+            jta.see(tk.END)
+
+        server = ServerService(
+            host="127.0.0.1",
+            port=LOCAL_PORT,
+            local_username=self.username_string,
+            on_private_msg=handle_incoming
+        )
         server.start()
 
-        def listen_for_messages():
-            listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            listener.bind(("0.0.0.0", MSG_PORT))
-            listener.listen()
-            while True:
-                conn, addr = listener.accept()
-                try:
-                    raw = conn.recv(16_384)
-                    pkt = json.loads(raw.decode())
-                    if pkt.get("type") == "chat_msg":
-                        ct = bytes.fromhex(pkt["body"])
-                        pt = MessageService.decrypt(contact.session_key, ct).decode()
-                        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        chat_window.after(0, lambda: (
-                            jta.insert(tk.END, f"[{ts}] {pkt['from']}: {pt}\n"),
-                            jta.see(tk.END)
-                        ))
-                except Exception as e:
-                    print("recv error:", e)
-                finally:
-                    conn.close()
-
-        threading.Thread(target=listen_for_messages, daemon=True).start()
         threading.Thread(target=status_pinger, daemon=True).start()
 
         stats_frame = tk.Frame(chat_window, bd=1, relief=tk.SOLID)
@@ -202,7 +187,7 @@ class Client:
                         "body": ct.hex()
                     }
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                        s.connect((ip, MSG_PORT))
+                        s.connect((ip, LOCAL_PORT))
                         s.sendall(json.dumps(pkt).encode())
                     log_private_message(friend_username, self.username_string, ct.hex())
                 except Exception as e:
