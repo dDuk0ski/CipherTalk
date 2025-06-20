@@ -132,8 +132,9 @@ class Client:
 
         def handle_incoming(sender, text):
             ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            jta.insert(tk.END, f"[{ts}] {sender}: {text}\n")
-            jta.see(tk.END)
+            chat_window.after(0, lambda: (
+                jta.insert(tk.END, f"[{ts}] {sender}: {text}\n"),
+            ))
 
         server = ServerService(
             host="127.0.0.1",
