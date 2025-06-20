@@ -144,7 +144,7 @@ class Client:
         for ts, snd, txt in load_private_history(friend_username, skey):
             jta.insert(tk.END, f"[{ts}][{snd}] {txt}\n")
 
-        server = ServerService(host="127.0.0.1", port=LOCAL_PORT, local_username=self.username_string)
+        server = ServerService(host="0.0.0.0", port=LOCAL_PORT, local_username=self.username_string)
         server.start()
 
         def listen_for_messages():
@@ -251,7 +251,7 @@ class Client:
                             "body": enc.hex()
                         }
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                            s.connect(("127.0.0.1", 9000))
+                            s.connect(("0.0.0.0", 9000))
                             s.sendall(json.dumps(pkt).encode())
                         log_private_message(friend_username, self.username_string, enc.hex())
                         jta.insert(tk.END, f"[USER_FILE_SYSTEM] ✅ Sent file: {os.path.basename(path)}")
