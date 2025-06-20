@@ -144,14 +144,11 @@ class Client:
                     raw = conn.recv(16_384)
                     pkt = json.loads(raw.decode())
                     if pkt.get("type") == "chat_msg":
-                        # hex→bytes, decrypt, decode
                         ct = bytes.fromhex(pkt["body"])
-                        pt = MessageService.decrypt(contact.session_key, ct).decode()
+                        pt = MessageService.decrypt(contact.session_key, ct)
                         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        # must use after() to touch widgets from non-main thread
                         chat_window.after(0, lambda: (
                             jta.insert(tk.END, f"[{ts}] {pkt['from']}: {pt}\n"),
-                            jta.see(tk.END)
                         ))
                 except Exception as e:
                     print("recv error:", e)
