@@ -1,6 +1,7 @@
 import json
 import os
 import socket
+import sys
 import threading
 import tkinter as tk
 from datetime import datetime
@@ -134,26 +135,32 @@ class Client:
         server.start()
 
         def listen_for_messages():
-            listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            listener.bind(("0.0.0.0", LOCAL_PORT))
-            listener.listen()
-            while True:
-                conn, addr = listener.accept()
+            try:
+                listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                listener.bind(("0.0.0.0", LOCAL_PORT))
+                listener.listen()
                 try:
-                    raw = conn.recv(16_384)
-                    pkt = json.loads(raw.decode())
-                    if pkt.get("type") == "chat_msg":
-                        ct = bytes.fromhex(pkt["body"])
-                        pt = MessageService.decrypt(contact.session_key, ct)
-                        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        chat_window.after(0, lambda: (
-                            jta.insert(tk.END, f"[{ts}] {pkt['from']}: {pt}\n"),
-                        ))
-                except Exception as e:
-                    print("recv error:", e)
-                finally:
-                    conn.close()
+                    while True:
+                        conn, addr = listener.accept()
+                        try:
+                            raw = conn.recv(16_384)
+                            pkt = json.loads(raw.decode())
+                            if pkt.get("type") == "chat_msg":
+                                ct = bytes.fromhex(pkt["body"])
+                                pt = MessageService.decrypt(contact.session_key, ct)
+                                ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                chat_window.after(0, lambda: (
+                                    jta.insert(tk.END, f"[{ts}] {pkt['from']}: {pt}\n"),
+                                ))
+                        except Exception as e:
+                            print("recv error:", e)
+                        finally:
+                            conn.close()
+                except:
+                    print("discovering error starting at line 144:", sys.exc_info()[0])
+            except Exception as e:
+                print("discovering error:", e)
 
         threading.Thread(target=listen_for_messages, daemon=True).start()
         threading.Thread(target=status_pinger, daemon=True).start()
