@@ -2,10 +2,7 @@ import json
 import os
 import socket
 import threading
-import time
 import tkinter as tk
-import warnings
-from contextlib import suppress
 from datetime import datetime
 from functools import partial
 from tkinter import scrolledtext
@@ -13,10 +10,12 @@ from tkinter import scrolledtext
 from code_service import CodeService
 from friend_service import FriendService
 from message_service import MessageService
-from log_service import load_private_history, load_group_history, log_group_message, log_private_message
+from log_service import load_private_history, log_private_message
 from file_service import FileService
-from run import show_friends, LISTEN_PORT
+from ServerService import ServerService
+from run import show_friends, LISTEN_PORT, status_pinger
 
+LOCAL_PORT = 9000
 
 class Client:
     def __init__(self, root):
@@ -50,7 +49,7 @@ class Client:
                     self.sidebar,
                     text=f"{icon} {c.username}\n @ {c.ip}:{c.port}",
                     width=20,
-                    command=partial(self.ui_chat_window, c.username)
+                    command=partial(self.ui_chat_window, c.username, c.ip)
                 ).pack(side=tk.TOP, pady=2)
             except Exception as e:
                 print(e)
@@ -97,7 +96,7 @@ class Client:
                     ip.place(x=360, y=45)
                     scrollbar = tk.Scrollbar(self.content_frame)
                     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-                    generated_code_string = CodeService.generate_code(self.username_string, self.ip_string, 9000)
+                    generated_code_string = CodeService.generate_code(self.username_string, self.ip_string, LOCAL_PORT)
                     generated_code_entry = tk.Text(self.content_frame, width=40, height=3, wrap=tk.WORD, yscrollcommand=scrollbar.set)
                     generated_code_entry.pack(side=tk.BOTTOM, pady=50, fill=tk.Y)
                     scrollbar.config(command=generated_code_entry.yview)
@@ -113,7 +112,7 @@ class Client:
 
             ip_entry.bind("<Return>", create_key)
 
-    def ui_chat_window(self, friend_username):
+    def ui_chat_window(self, friend_username, ip):
         chat_window = tk.Toplevel(self.root)
         chat_window.title(f"{friend_username}")
 
@@ -130,6 +129,36 @@ class Client:
         skey = contact.session_key
         for ts, snd, txt in load_private_history(friend_username, skey):
             jta.insert(tk.END, f"[{ts}][{snd}] {txt}\n")
+
+        server = ServerService(host=self.ip_string, port=LOCAL_PORT, local_username=self.username_string)
+        server.start()
+        threading.Thread(target=status_pinger, daemon=True).start()
+
+        stats_frame = tk.Frame(chat_window, bd=1, relief=tk.SOLID)
+        # place it at top-right, with a little inset (x_offset, y_offset)
+        x_offset, y_offset = 10, 10
+        stats_frame.place(
+            relx=1.0, rely=0.0,
+            x=-x_offset, y=y_offset,
+            anchor="ne"
+        )
+
+        # inside that box, just a couple of labels
+        sessions_lbl = tk.Label(stats_frame, text="Sessions: –", font=("", 8))
+        in_lbl = tk.Label(stats_frame, text="In: –", font=("", 8))
+        out_lbl = tk.Label(stats_frame, text="Out: –", font=("", 8))
+        for lbl in (sessions_lbl, in_lbl, out_lbl):
+            lbl.pack(anchor="w", padx=4, pady=1)
+
+        # refresher callback
+        def refresh_stats():
+            stats = server.get_stats()
+            sessions_lbl.config(text=f"Sessions: {stats['sessions']}")
+            in_lbl.config(text=f"In:       {stats['packets_in']}")
+            out_lbl.config(text=f"Out:      {stats['packets_out']}")
+            chat_window.after(1000, refresh_stats)
+
+        refresh_stats()
 
         def on_enter(event):
             message = jtf.get().strip()
@@ -150,7 +179,7 @@ class Client:
                         "body": ct.hex()
                     }
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                        s.connect(("127.0.0.1", LISTEN_PORT))
+                        s.connect((ip, LISTEN_PORT))
                         s.sendall(json.dumps(pkt).encode())
                     log_private_message(friend_username, self.username_string, ct.hex())
                 except Exception as e:

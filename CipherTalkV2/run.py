@@ -186,7 +186,7 @@ def main():
             print(f"\nServer Panel:\n  Sessions: {s['sessions']}\n  In: {s['packets_in']}  Out: {s['packets_out']}\n")
 
         elif choice == "7":
-            print("""
+            print(""")
 Quick Setup Guide:
 1. Find your public IP (e.g. https://ifconfig.me).
 2. Forward TCP port 9000 → your PC’s 9000.
