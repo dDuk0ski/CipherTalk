@@ -1,12 +1,21 @@
+import json
+import os
+import socket
 import threading
 import time
 import tkinter as tk
+import warnings
+from contextlib import suppress
 from datetime import datetime
+from functools import partial
 from tkinter import scrolledtext
 
 from code_service import CodeService
 from friend_service import FriendService
-from run import show_friends
+from message_service import MessageService
+from log_service import load_private_history, load_group_history, log_group_message, log_private_message
+from file_service import FileService
+from run import show_friends, LISTEN_PORT
 
 
 class Client:
@@ -36,8 +45,15 @@ class Client:
         friend_list = show_friends()
         for c in friend_list:
             icon = "🟢" if getattr(c, "online", False) else "⚪"
-            tk.Button(self.sidebar, text=f"{icon} {c.username}\n @ {c.ip}:{c.port}", width=20, command=self.ui_chat_window).pack(side=tk.TOP, pady=2)
-
+            try:
+                tk.Button(
+                    self.sidebar,
+                    text=f"{icon} {c.username}\n @ {c.ip}:{c.port}",
+                    width=20,
+                    command=partial(self.ui_chat_window, c.username)
+                ).pack(side=tk.TOP, pady=2)
+            except Exception as e:
+                print(e)
         tk.Button(self.sidebar, text=f"🟢 finered\n@ 127.0.0.1:9000", width=20, command=self.ui_chat_window).pack(side=tk.TOP, pady=2)
         tk.Button(self.sidebar, text=f"🟢 firednd\n@ 127.0.0.1:9000", width=20, command=self.ui_chat_window).pack(side=tk.TOP, pady=2)
         tk.Button(self.sidebar, text=f"🟢 shawty\n@ 127.0.0.1:9000", width=20, command=self.ui_chat_window).pack(side=tk.TOP, pady=2)
@@ -100,9 +116,9 @@ class Client:
 
             ip_entry.bind("<Return>", create_key)
 
-    def ui_chat_window(self):
+    def ui_chat_window(self, friend_username):
         chat_window = tk.Toplevel(self.root)
-        chat_window.title("Chat Window")
+        chat_window.title(f"{friend_username}")
 
         chat_window.geometry("800x400")
         chat_window.resizable(False, False)
@@ -113,14 +129,59 @@ class Client:
         jtf = tk.Entry(chat_window, width=80)
         jtf.pack(padx=10, pady=10)
 
+        contact = MessageService.get_contact_by_username(friend_username)
+        skey = contact.session_key
+        for ts, snd, txt in load_private_history(friend_username, skey):
+            jta.insert(tk.END, f"[{ts}][{snd}] {txt}\n")
+
         def on_enter(event):
             message = jtf.get().strip()
-            if message:
+            if message != "" and self.username_string != """NULL""":
                 timestamp = datetime.now()
                 timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
                 jta.insert(tk.END, f"[{timestamp_str}] You: {message}\n")
                 jta.see(tk.END)
                 jtf.delete(0, tk.END)
+
+                #Chat and shit
+                try:
+                    ct = MessageService.encrypt(contact.session_key, message)
+                    pkt = {
+                        "type": "chat_msg",
+                        "from": self.username_string,
+                        "to": friend_username,
+                        "body": ct.hex()
+                    }
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        s.connect(("127.0.0.1", LISTEN_PORT))
+                        s.sendall(json.dumps(pkt).encode())
+                    log_private_message(friend_username, self.username_string, ct.hex())
+                except Exception as e:
+                    jta.insert(tk.END, f"[CONSOLE_ERROR_CHAT_SYSTEM] {e}\n")
+
+                #File and shit
+                try:
+                    if message.startswith("/send_file "):
+                        path = message[len("/send_file "):].strip()
+                        if not os.path.isfile(path):
+                            jta.insert(tk.END, f"[USER_ERROR_FILE_SYSTEM] ❌ File not found: {path}")
+                            return
+                        enc = FileService.encrypt_file(contact.session_key, path)
+                        pkt = {
+                            "type": "file_chunk",
+                            "from": self.username_string,
+                            "to": friend_username,
+                            "filename": os.path.basename(path),
+                            "body": enc.hex()
+                        }
+                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                            s.connect(("127.0.0.1", LISTEN_PORT))
+                            s.sendall(json.dumps(pkt).encode())
+                        log_private_message(friend_username, self.username_string, enc.hex())
+                        jta.insert(tk.END, f"[USER_FILE_SYSTEM] ✅ Sent file: {os.path.basename(path)}")
+                        return
+                except Exception as e:
+                    jta.insert(tk.END, f"[CONSOLE_ERROR_FILE_SYSTEM] {e}\n")
 
         jtf.bind("<Return>", on_enter)
         chat_window.protocol("WM_DELETE_WINDOW", chat_window.destroy)

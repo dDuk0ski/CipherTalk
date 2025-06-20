@@ -1,8 +1,6 @@
 import uuid
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import x25519
 
-from crypto_service import CryptoService
 from local_storage import LocalStorage
 
 
