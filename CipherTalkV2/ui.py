@@ -24,7 +24,7 @@ class Client:
         self.root.title("CipherTalk ≽ܫ≼")
         self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.root.geometry("700x500")
-        self.root.resizable(False, False)
+        # self.root.resizable(False, False)
 
         self.username_string = """NULL"""
         self.ip_string = ""
@@ -175,7 +175,7 @@ class Client:
                             "body": enc.hex()
                         }
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                            s.connect(("127.0.0.1", LISTEN_PORT))
+                            s.connect(("127.0.0.1", 9000))
                             s.sendall(json.dumps(pkt).encode())
                         log_private_message(friend_username, self.username_string, enc.hex())
                         jta.insert(tk.END, f"[USER_FILE_SYSTEM] ✅ Sent file: {os.path.basename(path)}")
