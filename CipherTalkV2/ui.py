@@ -1,5 +1,8 @@
+import threading
+import time
 import tkinter as tk
-from tkinter import *
+from datetime import datetime
+from tkinter import scrolledtext
 
 from code_service import CodeService
 from friend_service import FriendService
@@ -11,11 +14,12 @@ class Client:
         self.root = root
         self.root.title("CipherTalk ≽ܫ≼")
         self.root.protocol("WM_DELETE_WINDOW", self.close)
-        self.root.geometry("600x400")
+        self.root.geometry("700x500")
         self.root.resizable(False, False)
 
-        self.username_string = ""
+        self.username_string = """NULL"""
         self.ip_string = ""
+        self.already_being_generated = False
 
         self.sidebar = tk.Frame(self.root, bg="light gray")
         self.sidebar.pack(side=tk.LEFT, fill=tk.Y, ipady=5, ipadx=5)
@@ -32,20 +36,28 @@ class Client:
         friend_list = show_friends()
         for c in friend_list:
             icon = "🟢" if getattr(c, "online", False) else "⚪"
-            tk.Button(self.sidebar, text=f"{icon} {c.username} @ {c.ip}:{c.port}", width=20)
+            tk.Button(self.sidebar, text=f"{icon} {c.username}\n @ {c.ip}:{c.port}", width=20, command=self.ui_chat_window).pack(side=tk.TOP, pady=2)
 
-        tk.Button(self.sidebar, text=f"Add friends", width=20, command=self.ui_show_friends).pack(side=tk.BOTTOM, pady=2)
+        tk.Button(self.sidebar, text=f"🟢 finered\n@ 127.0.0.1:9000", width=20, command=self.ui_chat_window).pack(side=tk.TOP, pady=2)
+        tk.Button(self.sidebar, text=f"🟢 firednd\n@ 127.0.0.1:9000", width=20, command=self.ui_chat_window).pack(side=tk.TOP, pady=2)
+        tk.Button(self.sidebar, text=f"🟢 shawty\n@ 127.0.0.1:9000", width=20, command=self.ui_chat_window).pack(side=tk.TOP, pady=2)
+        tk.Button(self.sidebar, text=f"Add friends", width=20, command=self.sidebar_add_friend).pack(side=tk.BOTTOM, pady=2)
 
     def ui_content_frame(self):
+        self.ui_user()
+        tk.Button(self.content_frame, text=f"Generate Friend Code", width=20,command=self.ui_generate_friend_code).pack(side=tk.BOTTOM, pady=2)
+
+        #implement later
         self.animation_label = tk.Label(self.content_frame, text="Developing za cat animation", bg="black", fg="lime")
         self.animation_label.pack(expand=True)
         self.content_frame.after(3000, self.clear_text)
 
-        self.ui_user()
-        self.ui_generate_friend_code()
-
     def ui_generate_friend_code(self):
-        def generate_code():
+        # will not generate after it is generated the first time
+        if self.already_being_generated:
+            return
+        else:
+            self.already_being_generated = True
             ip_entry = tk.Entry(self.content_frame, width=40, bg="white")
             ip_entry.pack(expand=True, side=tk.BOTTOM, pady=60)
             placeholder = "Enter your public IP: "
@@ -64,36 +76,54 @@ class Client:
             ip_entry.bind("<FocusOut>", on_focus_out)
 
             def create_key(event):
-                self.ip_string = ip_entry.get().strip()
-                ip_entry.destroy()
-                ip = tk.Label(self.content_frame, text=f"{self.ip_string}", bg="white")
-                ip.place(x=360, y=45)
-
-                # this shidded is broken
-                if self.username_string != "":
+                self.set_user_before_ip = tk.Label(text="Set your nickname first!")
+                if self.username_string != """NULL""":
+                    self.ip_string = ip_entry.get().strip()
+                    ip_entry.destroy()
+                    ip = tk.Label(self.content_frame, text=f"{self.ip_string}", bg="white")
+                    ip.place(x=360, y=45)
                     scrollbar = tk.Scrollbar(self.content_frame)
                     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
                     generated_code_string = CodeService.generate_code(self.username_string, self.ip_string, 9000)
                     generated_code_entry = tk.Text(self.content_frame, width=40, height=3, wrap=tk.WORD, yscrollcommand=scrollbar.set)
                     generated_code_entry.pack(side=tk.BOTTOM, pady=50, fill=tk.Y)
-
                     scrollbar.config(command=generated_code_entry.yview)
-
                     generated_code_entry.insert(tk.END, generated_code_string)
                     generated_code_entry.config(state=tk.DISABLED)
+                    if hasattr(self, 'set_user_before_ip'):
+                        self.set_user_before_ip.config(fg="black")
                 else:
-                    set_user_before_ip = tk.Label(text="Set your nickname first!")
-                    set_user_before_ip.place(x=400, y=45)
-                    self.content_frame.after(5000, set_user_before_ip.destroy())
-
+                    self.set_user_before_ip = tk.Label(self.content_frame, text="Set your nickname first!", bg="black",
+                                                       fg="red")
+                    self.set_user_before_ip.place(x=300, y=45)
                 code = tk.Text(self.content_frame, width=40, height=10, bg="white")
 
             ip_entry.bind("<Return>", create_key)
 
-        tk.Button(self.content_frame, text="Generate ID code", width=20, command=generate_code).pack(side=tk.BOTTOM, pady=20)
+    def ui_chat_window(self):
+        chat_window = tk.Toplevel(self.root)
+        chat_window.title("Chat Window")
 
+        chat_window.geometry("800x400")
+        chat_window.resizable(False, False)
 
+        jta = scrolledtext.ScrolledText(chat_window, width=80, height=20)
+        jta.pack(padx=10, pady=10)
+
+        jtf = tk.Entry(chat_window, width=80)
+        jtf.pack(padx=10, pady=10)
+
+        def on_enter(event):
+            message = jtf.get().strip()
+            if message:
+                timestamp = datetime.now()
+                timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                jta.insert(tk.END, f"[{timestamp_str}] You: {message}\n")
+                jta.see(tk.END)
+                jtf.delete(0, tk.END)
+
+        jtf.bind("<Return>", on_enter)
+        chat_window.protocol("WM_DELETE_WINDOW", chat_window.destroy)
 
     def ui_user(self):
         user_entry = tk.Entry(self.content_frame, width=40, bg="white")
@@ -118,15 +148,6 @@ class Client:
             username.place(x=360, y=10)
 
         user_entry.bind("<Return>", create_user)
-
-    def ui_show_friends(self):
-        friend_list = show_friends()
-        for c in friend_list:
-            icon = "🟢" if getattr(c, "online", False) else "⚪"
-            # need to add chat window here
-            tk.Button(self.sidebar, text=f"{icon} {c.username} \n @ {c.ip}:{c.port}", )
-
-        self.sidebar_add_friend()
 
     def sidebar_add_friend(self):
         self.clear_frame()
@@ -156,6 +177,7 @@ class Client:
                 FriendService.add_friend(decoded['username'], decoded['ip'], int(decoded['port']), decoded['public_key'])
                 result = tk.Label(self.sidebar, text=f"Friend added succesfuly", wraplength=120, justify=tk.LEFT, width=20)
                 result.place(x=7, y=65)
+
             except Exception as e:
                 error = tk.Label(self.sidebar, text=f"\n❌ Invalid code: {e}\n", wraplength=120, justify=tk.LEFT, width=20)
                 error.place(x=7, y=65)
