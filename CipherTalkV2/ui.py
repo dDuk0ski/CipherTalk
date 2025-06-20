@@ -54,9 +54,6 @@ class Client:
                 ).pack(side=tk.TOP, pady=2)
             except Exception as e:
                 print(e)
-        tk.Button(self.sidebar, text=f"🟢 finered\n@ 127.0.0.1:9000", width=20, command=self.ui_chat_window).pack(side=tk.TOP, pady=2)
-        tk.Button(self.sidebar, text=f"🟢 firednd\n@ 127.0.0.1:9000", width=20, command=self.ui_chat_window).pack(side=tk.TOP, pady=2)
-        tk.Button(self.sidebar, text=f"🟢 shawty\n@ 127.0.0.1:9000", width=20, command=self.ui_chat_window).pack(side=tk.TOP, pady=2)
         tk.Button(self.sidebar, text=f"Add friends", width=20, command=self.sidebar_add_friend).pack(side=tk.BOTTOM, pady=2)
 
     def ui_content_frame(self):
