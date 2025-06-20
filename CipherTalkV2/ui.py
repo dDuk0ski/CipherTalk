@@ -132,10 +132,36 @@ class Client:
 
         server = ServerService(host="127.0.0.1", port=LOCAL_PORT, local_username=self.username_string)
         server.start()
+
+        def listen_for_messages():
+            listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(("0.0.0.0", LOCAL_PORT))
+            listener.listen()
+            while True:
+                conn, addr = listener.accept()
+                try:
+                    raw = conn.recv(16_384)
+                    pkt = json.loads(raw.decode())
+                    if pkt.get("type") == "chat_msg":
+                        # hex→bytes, decrypt, decode
+                        ct = bytes.fromhex(pkt["body"])
+                        pt = MessageService.decrypt(contact.session_key, ct).decode()
+                        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        # must use after() to touch widgets from non-main thread
+                        chat_window.after(0, lambda: (
+                            jta.insert(tk.END, f"[{ts}] {pkt['from']}: {pt}\n"),
+                            jta.see(tk.END)
+                        ))
+                except Exception as e:
+                    print("recv error:", e)
+                finally:
+                    conn.close()
+
+        threading.Thread(target=listen_for_messages, daemon=True).start()
         threading.Thread(target=status_pinger, daemon=True).start()
 
         stats_frame = tk.Frame(chat_window, bd=1, relief=tk.SOLID)
-        # place it at top-right, with a little inset (x_offset, y_offset)
         x_offset, y_offset = 10, 10
         stats_frame.place(
             relx=1.0, rely=0.0,
@@ -143,14 +169,12 @@ class Client:
             anchor="ne"
         )
 
-        # inside that box, just a couple of labels
         sessions_lbl = tk.Label(stats_frame, text="Sessions: –", font=("", 8))
         in_lbl = tk.Label(stats_frame, text="In: –", font=("", 8))
         out_lbl = tk.Label(stats_frame, text="Out: –", font=("", 8))
         for lbl in (sessions_lbl, in_lbl, out_lbl):
             lbl.pack(anchor="w", padx=4, pady=1)
 
-        # refresher callback
         def refresh_stats():
             stats = server.get_stats()
             sessions_lbl.config(text=f"Sessions: {stats['sessions']}")
